@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>IPL-2017</title>
+  <link rel="stylesheet" href="ui/bootstraptheme.css">
+</head>
+<body>
+  <div id="chart"></div>
+  <div id="container1"></div> 
+  <div class="formhandler" data-src="data"></div>
+  
+ 
+
+</body>
+<script src="ui/jquery/dist/jquery.min.js"></script>
+<script src="ui/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/ui/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="ui/lodash/lodash.min.js"></script>
+<script src="ui/g1/dist/g1.min.js"></script>
+<script src="ui/vega/build/vega.min.js"></script>
+<script src="ui/vega-lite/build/vega-lite.min.js"></script>
+<script>
+  $('.formhandler').formhandler({pageSize: 5})
+  var spec = {
+  "$schema": "https://vega.github.io/schema/vega/v4.json",
+  "width": 1800,
+  "height": 360,
+  "autosize": "fit",
+  "padding": {
+    "top": 20
+  },
+  "title": "Analysis of the toss Decisions from 2012-2017",
+  "config": {
+    "group": {
+      "fill": "#F0F0F0",
+      "x": 100
+    },
+    "axis": {
+      "grid": true,
+      "gridColor": "#000000",
+      "gridOpacity": 0.3,
+      "gridDash": 2
+    },
+    "title": {
+      "offset": 7,
+      "fontSize": 16,
+      "anchor": "start",
+      "fontWeight": "bold"
+    }
+  },
+  "data": [
+    {
+      "name": "table",
+      "url": "data"
+    }
+  ],
+  "scales": [
+    {
+      "name": "scale_band",
+      "type": "point",
+      "range": "width",
+      "nice": true,
+      "paddingOuter": 0.3,
+      "domain": {
+        "data": "table",
+        "field": "toss_winner"
+      }
+    },
+    {
+      "name": "scale_height",
+      "type": "linear",
+      "range": "height",
+      "nice": true,
+      "domainMax": 100,
+      "domain": {
+        "data": "table",
+        "field": "id"
+      }
+    },
+    {
+      "name": "scale_color",
+      "type": "ordinal",
+      "range": [
+        "#3366CC",
+        "#DC3912",
+        "#FF9900",
+        "#109618",
+        "#9C27B0"
+      ],
+      "domain": {
+        "data": "table",
+        "field": "toss_decision"
+      }
+    }
+  ],
+  "axes": [
+    {
+      "orient": "bottom",
+      "scale": "scale_band",
+      "ticks": false,
+      "titlePadding": 5,
+      "minExtent": 35,
+      "labelPadding": 7,
+      "title": "Toss Winner"
+    },
+    {
+      "orient": "left",
+      "scale": "scale_height",
+      "ticks": false,
+      "titlePadding": 5,
+      "labelFlush": true,
+      "labelPadding": 7,
+      "minExtent": 25,
+      "title": "Times they decided to"
+    }
+  ],
+  "legends": [
+    {
+      "fill": "scale_color",
+      "direction": "horizontal",
+      "padding": 10,
+      "orient": "none",
+      "encode": {
+        "legend": {
+          "update": {
+            "x2": {
+              "signal": "width"
+            },
+            "y2": {
+              "value": 0
+            }
+          }
+        }
+      },
+      "symbolType": "square"
+    }
+  ],
+  "marks": [
+    {
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "series",
+          "data": "table",
+          "groupby": "toss_decision"
+        }
+      },
+      "marks": [
+        {
+          "type": "line",
+          "from": {
+            "data": "series"
+          },
+          "encode": {
+            "enter": {
+              "x": {
+                "scale": "scale_band",
+                "field": "toss_winner"
+              },
+              "y": {
+                "scale": "scale_height",
+                "field": "id"
+              },
+              "stroke": {
+                "scale": "scale_color",
+                "field": "toss_decision"
+              },
+              "strokeWidth": {
+                "value": 1
+              }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": {
+            "data": "series"
+          },
+          "shape": "cross",
+          "encode": {
+            "enter": {
+              "width": {
+                "scale": "scale_band",
+                "field": "toss_winner"
+              },
+              "x": {
+                "scale": "scale_band",
+                "field": "toss_winner"
+              },
+              "y": {
+                "scale": "scale_height",
+                "field": "id"
+              },
+              "fill": {
+                "scale": "scale_color",
+                "field": "toss_decision"
+              },
+              "stroke": {
+                "value": "#ffffff"
+              },
+              "strokeWidth": {
+                "value": 1.5
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+  var view = new vega.View(vega.parse(spec))
+    .renderer('svg')
+    .logLevel(vega.Warn)
+    .initialize('#chart')
+    .hover()
+    .run()
+  </script>
+
+<script>
+  function draw_chart() {
+    var view = new vega.View(vega.parse(vl.compile(spec).spec))
+      .renderer('svg')
+      .initialize('#chart')
+      .hover()
+      .run()
+    view.addEventListener('click', filterTableOnClick)
+  }
+  draw_chart()
+  var baseDataURL = spec.data.url
+  function redrawChartFromURL(e) {
+    if (e.hash.relative) {
+      spec.data.url = g1.url.parse(baseDataURL).toString() + e.hash.relative
+    } else { spec.data.url = baseDataURL }
+    draw_chart()
+  }
+  $('body').urlfilter({target: 'pushState'})
+  $(window).on('#', redrawChartFromURL)
+    .urlchange()
+  function filterTableOnClick(event, item) {
+    var qparts = {};
+    Object.entries(item.tooltip || item.datum).forEach(([key, val]) => {
+      if (!(key == "Sales")) {
+        qparts[key] = val;
+      }
+    })
+    if (_.isEmpty(qparts)) { return }
+    var url = g1.url.parse(location.hash.replace('#', ''))
+    location.hash = url.update(qparts).toString();
+  }
+  </script>
+  <script>
+  $('#container1').on('change', redrawChartFromURL) 
+.dropdown({
+    "url": "data",
+    "key": "toss_winner",
+    "value_key": "toss_winner",
+    "label_key": "toss_winner",
+    "target": "#",
+    "options": {liveSearch: true}
+  })
+</script>
+</html>
